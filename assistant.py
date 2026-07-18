@@ -54,6 +54,8 @@ def onStart(name, location, length):
 
 while(active):
     text = record_text()
+
+    # Special cases
     if text == None:
         continue
     if ("end" in text) or ("terminate" in text) or ("quit" in text) or ("kill" in text):
@@ -62,4 +64,6 @@ while(active):
 
     print("Wrote text: "+ text)
     engine.connect('started-word', onStart)
+
+    # Filler function used to verify speach-to-text accuracy
     speak(text)
