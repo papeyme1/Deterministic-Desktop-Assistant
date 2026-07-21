@@ -2,3 +2,5 @@ speech_recognition
 pyttsx3
 time
 num2words
+word2number
+importlib

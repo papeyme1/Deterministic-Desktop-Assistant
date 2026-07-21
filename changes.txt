@@ -1,3 +1,6 @@
 July 19th, 2026
     Assistant can now dynamically read function file for potential executables
     Added timeout to voice detection after 3 consecutive failures
+
+July 20th, 2026
+    Assistant can now dynamically call outside functions based on user voice input

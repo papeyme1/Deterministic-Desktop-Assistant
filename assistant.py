@@ -1,5 +1,6 @@
-import speech_recognition as sr, pyttsx3, time
+import speech_recognition as sr, pyttsx3, time, importlib
 from num2words import num2words
+from word2number import w2n
 
 active = True
 r = sr.Recognizer()
@@ -18,20 +19,18 @@ engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Speed of speech
 engine.setProperty('volume', 1.0) # Volume (0.0 to 1.0)
 
-####################################################################
+###################################################################
 
+# TTS functions ---------------------------------------------------
 def record_text():
     try:
         with m as source: 
             print("Listening...")
             audio = r.listen(source)
-        print("Got it! Now to recognize it...")
+        print("Speech detected. Recognizing...")
         
         # recognize speech using Google Speech Recognition
         value = r.recognize_google(audio)
-
-        print("You said {}".format(value))
-
         return value
         
     except sr.UnknownValueError:
@@ -53,6 +52,31 @@ def onStart(name, location, length):
     if location == 0:
         print('Loading speech...')
         time.sleep(1.5)
+# -----------------------------------------------------------------
+
+def call_outside_function(executable):
+    func = getattr(importlib.import_module("assistant_functions"), executable)
+    func()
+
+# Number formatting
+def format_number(text, decimal=False):
+    text = text.split(" ")
+    # EX: one, two, three
+    if decimal == False:    
+        for index in range(len(text)):
+            if (text[index].isdigit()):
+                text[index] = num2words(int(text[index]))
+    # EX: 1, 2, 3
+    else:
+        for index in range(len(text)):
+            try:
+                text[index] = str(w2n.word_to_num(text[index]))
+            except ValueError:
+                print("ValErr")
+            except TypeError:
+                print("TypeErr")
+    text = " ".join((text))
+    return str(text)
 
 attempts = 1
 while(active):
@@ -68,21 +92,14 @@ while(active):
     if ("end" in text) or ("terminate" in text) or ("quit" in text) or ("kill" in text):
         active = False
         break
-    
-    # Number formatting
-    text = text.split(" ")
-    for word in text:
-        if word.isdigit():
-            print("Found number")
-            word = num2words(int(word))
-            print("Number: " + word)
-    text = " ".join(text)
-    print("after: " + text)
+
+    text = format_number(text, decimal=False)
 
     # Timeout handling
-    print("Wrote text: "+ text)
     attempts = 1
     engine.connect('started-word', onStart)
+
+    print("You said {}".format(text))
 
     # Handles function calls from user inout
     if ("execute" in text) or ("begin" in text) or ("start" in text) or ("use" in text):
@@ -95,10 +112,34 @@ while(active):
                 if "def" in line:
                     potential_executables.append(line[4:(line.find("("))])
 
-            # Function matching
-            # print("Potential executables:", potential_executables)        
+            # Function matching       
             for function in potential_executables:
                 if function.replace("_", " ") in text:
                     matches.append(function.replace("_", " "))
-            speech = ("Choose function: ", matches)
-            speak(speech)
+            
+            # Execution handling
+            if (len(matches) == 0):
+                speak("No executables found with that name.")
+            elif (len(matches) == 1):
+                speak("Executing " + str(matches))
+                call_outside_function(matches[0].replace(" ", "_"))
+            else:
+                speak("Choose function: " + str(matches))
+                num = ""
+                for i in range(3):
+                    num = record_text()
+                    if num != None:
+                        break
+                    else:
+                        print("No speech detected.")
+                num = format_number(num, decimal=True).split(" ")
+                print("recorded: " + str(num))
+                for index in range(len(num)-1):
+                    if not num[index].isdigit():
+                        num.pop(index)
+                num = int("".join(num))
+                print("Final: " + str(num))
+                if num <= len(matches):
+                    call_outside_function(matches[num-1])
+                else:
+                    speak("Selection outside of range.")
